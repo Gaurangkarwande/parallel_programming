@@ -5,7 +5,7 @@ INCLUDES = -I .
 TARGET = matmul
 MAP_FILE = matmul.map
 
-CC_OPTIONS = -fopenmp -O2 -g -Wall
+CC_OPTIONS = -fopenmp -g -Wall
 LD_FLAGS = -Xlinker -Map=$(MAP_FILE)
 LD_LIBS = -lblas -lm
 

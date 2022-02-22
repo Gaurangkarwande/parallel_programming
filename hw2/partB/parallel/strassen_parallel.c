@@ -236,7 +236,7 @@ void multiply_parallel(int A[], int B[], int C[], int dim)
     }
 }
 
-
+// parallel is not working
 int main()
 {
     int dim = 8;

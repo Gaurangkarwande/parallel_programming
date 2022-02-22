@@ -152,88 +152,93 @@ void multiply_strassen(int A[], int B[], int C[], int dim)
         split(A11, A12, A21, A22, A, block_size);
         split(B11, B12, B21, B22, B, block_size);
         
-
-        //P1 = A11 * (B12 - B22)
-        #pragma omp task shared(P1) firstprivate(B12, B22, sub_result, block_size, A11)
+        #pragma omp parallel firstprivate(add_result1, add_result2, sub_result)
         {
-            sub(B12, B22, sub_result, block_size);
-            multiply_strassen(A11, sub_result, P1, block_size);
-        }
+            #pragma omp single
+            {
+            //P1 = A11 * (B12 - B22)
+                #pragma omp task
+                {
+                    sub(B12, B22, sub_result, block_size);
+                    multiply_strassen(A11, sub_result, P1, block_size);
+                }
 
-        //P2 = (A11 + A12) * B22
-        #pragma omp task shared(P2) firstprivate(A11, A12, add_result1, block_size, B22)
-        {
-            add(A11, A12, add_result1, block_size);
-            multiply_strassen(add_result1, B22, P2, block_size);
-        }
+                //P2 = (A11 + A12) * B22
+                #pragma omp task
+                {
+                    add(A11, A12, add_result1, block_size);
+                    multiply_strassen(add_result1, B22, P2, block_size);
+                }
 
-        //P3 = (A21 + A22) * B11
-        #pragma omp task shared(P3) firstprivate(A21, A22, add_result1, block_size, B11)
-        {
-            add(A21, A22, add_result1, block_size);
-            multiply_strassen(add_result1, B11, P3, block_size);
-        }
+                //P3 = (A21 + A22) * B11
+                #pragma omp task
+                {
+                    add(A21, A22, add_result1, block_size);
+                    multiply_strassen(add_result1, B11, P3, block_size);
+                }
 
-        //P4 = (A21 + A22) * B11
-        #pragma omp task shared(P4) firstprivate(B21, B11, sub_result, block_size, A22)
-        {
-            sub(B21, B11, sub_result, block_size);
-            multiply_strassen(A22, sub_result, P4, block_size);
-        }
+                //P4 = (A21 + A22) * B11
+                #pragma omp task
+                {
+                    sub(B21, B11, sub_result, block_size);
+                    multiply_strassen(A22, sub_result, P4, block_size);
+                }
 
-        //P5 = (A11 + A22) * (B11 + B22)
-        #pragma omp task shared(P5) firstprivate(A11, A22, add_result1, block_size, B11, B22, add_result2)
-        {
-            add(A11, A22, add_result1, block_size);
-            add(B11, B22, add_result2, block_size);
-            multiply_strassen(add_result1, add_result2, P5, block_size);
-        }
+                //P5 = (A11 + A22) * (B11 + B22)
+                #pragma omp task
+                {
+                    add(A11, A22, add_result1, block_size);
+                    add(B11, B22, add_result2, block_size);
+                    multiply_strassen(add_result1, add_result2, P5, block_size);
+                }
 
-        //P6 = (A12 - A22) * (B21 + B22)
-        #pragma omp task shared(P6) firstprivate(A12, A22, sub_result, block_size, B21, B22, add_result1)
-        {
-            sub(A12, A22, sub_result, block_size);
-            add(B21, B22, add_result1, block_size);
-            multiply_strassen(sub_result, add_result1, P6, block_size);
-        }
+                //P6 = (A12 - A22) * (B21 + B22)
+                #pragma omp task
+                {
+                    sub(A12, A22, sub_result, block_size);
+                    add(B21, B22, add_result1, block_size);
+                    multiply_strassen(sub_result, add_result1, P6, block_size);
+                }
 
-        //P7 = (A11 - A21) * (B11 + B12)
-        #pragma omp task shared(P7) firstprivate(A11, A21, sub_result,block_size, B11, B12, add_result1)
-        {
-            sub(A11, A21, sub_result,block_size);
-            add(B11, B12, add_result1, block_size);
-            multiply_strassen(sub_result, add_result1, P7, block_size);
-        }
+                //P7 = (A11 - A21) * (B11 + B12)
+                #pragma omp task
+                {
+                    sub(A11, A21, sub_result,block_size);
+                    add(B11, B12, add_result1, block_size);
+                    multiply_strassen(sub_result, add_result1, P7, block_size);
+                }
+            };
 
-        #pragma omp taskwait
-        //deallocate A, B submatrices and add, sub results
-        printf("\n Merging block of size %d, thread %d of %d\n", block_size, omp_get_thread_num(), omp_get_num_threads());
-        free(A11); free(A12); free(A21); free(A22);
-        free(B11); free(B12); free(B21); free(B22);
-        free(add_result1); free(add_result2); free(sub_result);
+            #pragma omp taskwait
 
-        //Compute C matrix blocks
-        compute_C(C11, C12, C21, C22, P1, P2, P3, P4, P5, P6, P7, block_size);
+            #pragma omp critical
+            {
+                //deallocate A, B submatrices and add, sub results
+                printf("\n Merging block of size %d, thread %d of %d\n", block_size, omp_get_thread_num(), omp_get_num_threads());
+                free(A11); free(A12); free(A21); free(A22);
+                free(B11); free(B12); free(B21); free(B22);
+                free(add_result1); free(add_result2); free(sub_result);
 
-        //deallocate P submatrices
-        free(P1); free(P2); free(P3); free(P4); free(P5); free(P6); free(P7);
+                //Compute C matrix blocks
+                compute_C(C11, C12, C21, C22, P1, P2, P3, P4, P5, P6, P7, block_size);
 
-        //merge blocks
+                //deallocate P submatrices
+                free(P1); free(P2); free(P3); free(P4); free(P5); free(P6); free(P7);
 
-        merge(C11, C12, C21, C22, C, block_size);
-        free(C11); free(C12); free(C21); free(C22);
-        print_matrix(block_size, block_size, C);
+                //merge blocks
+
+                merge(C11, C12, C21, C22, C, block_size);
+                free(C11); free(C12); free(C21); free(C22);
+                print_matrix(block_size, block_size, C);
+            };
+        };
 
     }
 }
 
 void multiply_parallel(int A[], int B[], int C[], int dim)
 {
-    #pragma omp parallel
-    {
-        #pragma omp single
-            multiply_strassen(A, B, C, dim);
-    }
+    multiply_strassen(A, B, C, dim);
 }
 
 // parallel is not working

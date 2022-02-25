@@ -2,14 +2,14 @@
 
 CC = gcc
 INCLUDES = -I .
-TARGET = hello
-MAP_FILE = hello.map
+TARGET = pi
+MAP_FILE = pi.map
 
 CC_OPTIONS = -Wall -O2 -g -fopenmp
 LD_FLAGS = -Xlinker -Map=$(MAP_FILE)
 LD_LIBS = -lblas -lm
 
-OBJ_FILES = hello.o 
+OBJ_FILES = pi.o 
 
 .SILENT: clean all %.o
 
@@ -24,5 +24,5 @@ all: ${OBJ_FILES}
 clean:
 	@echo "Cleaning $(OBJ_FILES) $(TARGET) $(MAP_FILE)..."
 	-rm -rf	 *.o
-	-rm -rf	 hello.map
-	-rm -rf	 hello
+	-rm -rf	 pi.map
+	-rm -rf	 pi

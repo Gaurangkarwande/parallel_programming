@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <omp.h>
-#define BLOCK_SIZE 2
-#define NUM_THREADS 2
+#define BLOCK_SIZE 32
+#define NUM_THREADS 16
 
 
 void initialize_matrix(int row, int col, int mat[])
@@ -83,6 +83,7 @@ void merge(int *C11, int *C12, int *C21, int *C22, int *C, int block_size) {
 			C[(i + block_size) * 2 * block_size + j + block_size] = C22[i * block_size + j];
 		}
 	}
+    // print_matrix(block_size*2, block_size*2, C);
 }
 
 void compute_C(int *C11, int *C12, int *C21, int *C22, int *P1, int *P2, int *P3, int *P4, int *P5, int *P6, int *P7, int size)
@@ -113,7 +114,7 @@ void sub(int *A, int *B, int *C, int dim) {
 	}
 }
 
-void multiply_strassen(int A[], int B[], int C[], int dim)
+void multiply_strassen_serial(int A[], int B[], int C[], int dim)
 {
     if (dim <= BLOCK_SIZE){
         multiply_naive(dim, dim, A, dim, dim, B, C);
@@ -151,63 +152,39 @@ void multiply_strassen(int A[], int B[], int C[], int dim)
 
         split(A11, A12, A21, A22, A, block_size);
         split(B11, B12, B21, B22, B, block_size);
-        
 
         //P1 = A11 * (B12 - B22)
-        #pragma omp task shared(P1) firstprivate(B12, B22, sub_result, block_size, A11)
-        {
-            sub(B12, B22, sub_result, block_size);
-            multiply_strassen(A11, sub_result, P1, block_size);
-        }
+        sub(B12, B22, sub_result, block_size);
+        multiply_strassen_serial(A11, sub_result, P1, block_size);
 
         //P2 = (A11 + A12) * B22
-        #pragma omp task shared(P2) firstprivate(A11, A12, add_result1, block_size, B22)
-        {
-            add(A11, A12, add_result1, block_size);
-            multiply_strassen(add_result1, B22, P2, block_size);
-        }
+        add(A11, A12, add_result1, block_size);
+        multiply_strassen_serial(add_result1, B22, P2, block_size);
 
         //P3 = (A21 + A22) * B11
-        #pragma omp task shared(P3) firstprivate(A21, A22, add_result1, block_size, B11)
-        {
-            add(A21, A22, add_result1, block_size);
-            multiply_strassen(add_result1, B11, P3, block_size);
-        }
+        add(A21, A22, add_result1, block_size);
+        multiply_strassen_serial(add_result1, B11, P3, block_size);
 
         //P4 = (A21 + A22) * B11
-        #pragma omp task shared(P4) firstprivate(B21, B11, sub_result, block_size, A22)
-        {
-            sub(B21, B11, sub_result, block_size);
-            multiply_strassen(A22, sub_result, P4, block_size);
-        }
+        sub(B21, B11, sub_result, block_size);
+        multiply_strassen_serial(A22, sub_result, P4, block_size);
 
         //P5 = (A11 + A22) * (B11 + B22)
-        #pragma omp task shared(P5) firstprivate(A11, A22, add_result1, block_size, B11, B22, add_result2)
-        {
-            add(A11, A22, add_result1, block_size);
-            add(B11, B22, add_result2, block_size);
-            multiply_strassen(add_result1, add_result2, P5, block_size);
-        }
+        add(A11, A22, add_result1, block_size);
+        add(B11, B22, add_result2, block_size);
+        multiply_strassen_serial(add_result1, add_result2, P5, block_size);
 
         //P6 = (A12 - A22) * (B21 + B22)
-        #pragma omp task shared(P6) firstprivate(A12, A22, sub_result, block_size, B21, B22, add_result1)
-        {
-            sub(A12, A22, sub_result, block_size);
-            add(B21, B22, add_result1, block_size);
-            multiply_strassen(sub_result, add_result1, P6, block_size);
-        }
+        sub(A12, A22, sub_result, block_size);
+        add(B21, B22, add_result1, block_size);
+        multiply_strassen_serial(sub_result, add_result1, P6, block_size);
 
         //P7 = (A11 - A21) * (B11 + B12)
-        #pragma omp task shared(P7) firstprivate(A11, A21, sub_result,block_size, B11, B12, add_result1)
-        {
-            sub(A11, A21, sub_result,block_size);
-            add(B11, B12, add_result1, block_size);
-            multiply_strassen(sub_result, add_result1, P7, block_size);
-        }
+        sub(A11, A21, sub_result,block_size);
+        add(B11, B12, add_result1, block_size);
+        multiply_strassen_serial(sub_result, add_result1, P7, block_size);
 
-        #pragma omp taskwait
         //deallocate A, B submatrices and add, sub results
-        printf("\n Merging block of size %d, thread %d of %d\n", block_size, omp_get_thread_num(), omp_get_num_threads());
         free(A11); free(A12); free(A21); free(A22);
         free(B11); free(B12); free(B21); free(B22);
         free(add_result1); free(add_result2); free(sub_result);
@@ -222,29 +199,153 @@ void multiply_strassen(int A[], int B[], int C[], int dim)
 
         merge(C11, C12, C21, C22, C, block_size);
         free(C11); free(C12); free(C21); free(C22);
-        print_matrix(block_size, block_size, C);
+
+    }
+}
+
+void multiply_strassen(int A[], int B[], int C[], int dim, int level, int p)
+{
+    if (dim <= BLOCK_SIZE){
+        multiply_naive(dim, dim, A, dim, dim, B, C);
+    }
+    else
+    {
+        int block_size = dim / 2;
+        int *A11 = (int *) malloc((block_size*block_size) * sizeof(int));
+        int *A12 = (int *) malloc((block_size*block_size) * sizeof(int));
+        int *A21 = (int *) malloc((block_size*block_size) * sizeof(int));
+        int *A22 = (int *) malloc((block_size*block_size) * sizeof(int));
+
+        int *B11 = (int *) malloc((block_size*block_size) * sizeof(int));
+        int *B12 = (int *) malloc((block_size*block_size) * sizeof(int));
+        int *B21 = (int *) malloc((block_size*block_size) * sizeof(int));
+        int *B22 = (int *) malloc((block_size*block_size) * sizeof(int));
+
+        int *C11 = (int *) malloc((block_size*block_size) * sizeof(int));
+        int *C12 = (int *) malloc((block_size*block_size) * sizeof(int));
+        int *C21 = (int *) malloc((block_size*block_size) * sizeof(int));
+        int *C22 = (int *) malloc((block_size*block_size) * sizeof(int));
+        
+
+        int *P1 = (int *) malloc((block_size*block_size) * sizeof(int));
+        int *P2 = (int *) malloc((block_size*block_size) * sizeof(int));
+        int *P3 = (int *) malloc((block_size*block_size) * sizeof(int));
+        int *P4 = (int *) malloc((block_size*block_size) * sizeof(int));
+        int *P5 = (int *) malloc((block_size*block_size) * sizeof(int));
+        int *P6 = (int *) malloc((block_size*block_size) * sizeof(int));
+        int *P7 = (int *) malloc((block_size*block_size) * sizeof(int));
+
+        split(A11, A12, A21, A22, A, block_size);
+        split(B11, B12, B21, B22, B, block_size);
+        
+        #pragma omp parallel
+        {
+            #pragma omp single
+            {
+            //P1 = A11 * (B12 - B22)
+                #pragma omp task
+                {
+                    int *sub_result = (int *) malloc((block_size*block_size) * sizeof(int));
+                    sub(B12, B22, sub_result, block_size);
+                    multiply_strassen(A11, sub_result, P1, block_size, level+1, 1);
+                }
+
+                //P2 = (A11 + A12) * B22
+                #pragma omp task  
+                {
+                    int *add_result1 = (int *) malloc((block_size*block_size) * sizeof(int));
+                    add(A11, A12, add_result1, block_size);
+                    multiply_strassen(add_result1, B22, P2, block_size, level+1, 2);
+                }
+
+                //P3 = (A21 + A22) * B11
+                #pragma omp task  
+                {
+                    int *add_result1 = (int *) malloc((block_size*block_size) * sizeof(int));
+                    add(A21, A22, add_result1, block_size);
+                    multiply_strassen(add_result1, B11, P3, block_size, level+1, 3);
+                }
+
+                //P4 = (A21 + A22) * B11
+                #pragma omp task  
+                {
+                    int *sub_result = (int *) malloc((block_size*block_size) * sizeof(int));
+                    sub(B21, B11, sub_result, block_size);
+                    multiply_strassen(A22, sub_result, P4, block_size, level+1, 4);
+                }
+
+                //P5 = (A11 + A22) * (B11 + B22)
+                #pragma omp task  
+                {
+                    int *add_result1 = (int *) malloc((block_size*block_size) * sizeof(int));
+                    int *add_result2 = (int *) malloc((block_size*block_size) * sizeof(int));
+                    add(A11, A22, add_result1, block_size);
+                    add(B11, B22, add_result2, block_size);
+                    multiply_strassen(add_result1, add_result2, P5, block_size, level+1, 5);
+                }
+
+                //P6 = (A12 - A22) * (B21 + B22)
+                #pragma omp task  
+                {
+                    int *sub_result = (int *) malloc((block_size*block_size) * sizeof(int));
+                    int *add_result1 = (int *) malloc((block_size*block_size) * sizeof(int));
+                    sub(A12, A22, sub_result, block_size);
+                    add(B21, B22, add_result1, block_size);
+                    multiply_strassen(sub_result, add_result1, P6, block_size, level+1, 6);
+                }
+
+                //P7 = (A11 - A21) * (B11 + B12)
+                #pragma omp task 
+                {
+                    int *sub_result = (int *) malloc((block_size*block_size) * sizeof(int));
+                    int *add_result1 = (int *) malloc((block_size*block_size) * sizeof(int));
+                    sub(A11, A21, sub_result,block_size);
+                    add(B11, B12, add_result1, block_size);
+                    multiply_strassen(sub_result, add_result1, P7, block_size, level+1, 7);
+                }
+
+                #pragma omp taskwait
+            };
+            #pragma omp single
+                {
+                    // printf("Calculating P%d", p);
+                    //deallocate A, B submatrices and add, sub results
+                    // printf("\n Level %d: Merging blocks of size %d, into size %d by thread %d of %d\n", level, block_size, dim, omp_get_thread_num(), omp_get_num_threads());
+                    free(A11); free(A12); free(A21); free(A22);
+                    free(B11); free(B12); free(B21); free(B22);
+                    // free(add_result1); free(add_result2); free(sub_result);
+
+                    //Compute C matrix blocks
+                    compute_C(C11, C12, C21, C22, P1, P2, P3, P4, P5, P6, P7, block_size);
+
+                    //deallocate P submatrices
+                    free(P1); free(P2); free(P3); free(P4); free(P5); free(P6); free(P7);
+
+                    //merge blocks
+
+                    merge(C11, C12, C21, C22, C, block_size);
+                    free(C11); free(C12); free(C21); free(C22);
+                }
+        };
 
     }
 }
 
 void multiply_parallel(int A[], int B[], int C[], int dim)
 {
-    #pragma omp parallel
-    {
-        #pragma omp single
-            multiply_strassen(A, B, C, dim);
-    }
+    multiply_strassen(A, B, C, dim, 0, 0);
 }
 
-// parallel is not working
 int main()
 {
-    int dim = 8;
+    int dim = 1024;
     double start, time_s, time_p;
     int* A = (int *) malloc((dim * dim) * sizeof(int));
     int* B = (int *) malloc((dim * dim) * sizeof(int));
     int* C = (int *) malloc((dim * dim) * sizeof(int));
     int* Baseline = (int *) malloc((dim * dim) * sizeof(int));
+
+    printf("\nFor matrix of size %d x %d: \n", dim, dim);
 
     initialize_matrix(dim, dim, A);
     initialize_matrix(dim, dim, B);
@@ -256,7 +357,8 @@ int main()
     
 
     start = omp_get_wtime();
-    multiply_naive(dim, dim, A, dim, dim, B, Baseline);
+    // multiply_naive(dim, dim, A, dim, dim, B, Baseline);
+    multiply_strassen_serial(A, B, C, dim);
     time_s = omp_get_wtime() - start;
 
     start = omp_get_wtime();

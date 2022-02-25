@@ -30,13 +30,36 @@ void calculate_pi(double *pi)
         *pi += step*sum[i][0];
 }
 
+void calculate_pi_critical(double *pi)
+{
+    int i;
+    step = 1.0/(double) num_steps;
+    omp_set_num_threads(NUM_THREADS);
+    #pragma omp parallel
+    {
+        double x;
+        int nthreads, thread_ID;
+        double thread_sum = 0.0;
+        nthreads = omp_get_num_threads();
+        thread_ID = omp_get_thread_num();
+        for (i = thread_ID; i < num_steps; i+= nthreads)
+        {
+            x = (i+0.5)*step;
+            thread_sum += 4.0/(1.0 + x*x);          //why does directly puttin pi here not work
+        }
+        printf("Thread id: %d, sum = %f \n", thread_ID, thread_sum);
+        #pragma omp critical
+            *pi += step*thread_sum;
+    }
+}
+
 int main()
 {
     double time, start, end, pi = 0.0;
     start = omp_get_wtime();
-    calculate_pi(&pi);
+    calculate_pi_critical(&pi);
     end = omp_get_wtime();
     time = end - start;
-    printf("pi is %f and Time elapsed: %f    ms \n", pi, time);
+    printf("Num Threads: %d: pi is %f and Time elapsed: %f ms \n",NUM_THREADS, pi, time);
     return 0;
 } 

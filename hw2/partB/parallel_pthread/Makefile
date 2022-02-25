@@ -2,14 +2,14 @@
 
 CC = gcc
 INCLUDES = -I .
-TARGET = matmul
-MAP_FILE = matmul.map
+TARGET = strassen_pthread
+MAP_FILE = strassen_pthread.map
 
 CC_OPTIONS = -fopenmp -g -Wall
 LD_FLAGS = -Xlinker -Map=$(MAP_FILE)
-LD_LIBS = -lblas -lm
+LD_LIBS = -lpthread
 
-OBJ_FILES = matmul.o 
+OBJ_FILES = strassen_pthread.o 
 
 .SILENT: clean all %.o
 
@@ -24,5 +24,5 @@ all: ${OBJ_FILES}
 clean:
 	@echo "Cleaning $(OBJ_FILES) $(TARGET) $(MAP_FILE)..."
 	-rm -rf	 *.o
-	-rm -rf	 matmul.map
-	-rm -rf	 matmul
+	-rm -rf	 strassen_pthread.map
+	-rm -rf	 strassen_pthread

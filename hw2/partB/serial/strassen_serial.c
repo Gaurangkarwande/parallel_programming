@@ -100,7 +100,7 @@ void sub(int *A, int *B, int *C, int dim) {
 	}
 }
 
-void multiply_strassen(int A[], int B[], int C[], int dim)
+void multiply_strassen_serial(int A[], int B[], int C[], int dim)
 {
     if (dim <= BLOCK_SIZE){
         multiply_naive(dim, dim, A, dim, dim, B, C);

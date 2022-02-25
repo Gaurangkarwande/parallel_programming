@@ -7,7 +7,7 @@ MAP_FILE = strassen_parallel.map
 
 CC_OPTIONS = -fopenmp -g -Wall
 LD_FLAGS = -Xlinker -Map=$(MAP_FILE)
-LD_LIBS = -lblas -lm
+LD_LIBS = -lpthread
 
 OBJ_FILES = strassen_parallel.o 
 

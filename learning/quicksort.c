@@ -1,37 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <omp.h>
+#include "utils.h"
+
 #define NUM_THREADS 2
 
 int level = 0;
-
-void initialize_array(int dim, int arr[])
-{
-    srand(345);
-    int i;
-    for ( i = 0; i < dim; i++) {
-        arr[i] = rand() % dim;
-    }
-   return; 
-}
-
-void print_array(int dim, int arr[])
-{
-    int i;
-    printf("Array is: \n");
-    for ( i = 0; i < dim; i++) {
-        printf("%d, ", arr[i]);
-    }
-    printf("\n");
-   return; 
-}
-
-void swap(int *a, int *b)
-{
-   int temp = *a;
-   *a = *b;
-   *b = temp;
-} 
 
 int partition(int low, int high, int arr[])
 {
@@ -119,8 +93,8 @@ int main()
     double start, time_s, time_p;
     int* A = malloc(dim * sizeof(int));
     int* B = malloc(dim * sizeof(int));
-    initialize_array(dim, A);
-    initialize_array(dim, B);
+    initialize_1Darray(dim, A);
+    initialize_1Darray(dim, B);
 
     omp_set_num_threads(NUM_THREADS);
     start = omp_get_wtime();
@@ -128,7 +102,7 @@ int main()
     time_s = omp_get_wtime() - start;
 
     start = omp_get_wtime();
-    quicksort_par(dim, A);
+    quicksort_par(0, dim-1, A);
     time_p = omp_get_wtime() - start;
 
     printf("time for serial: %f, time for %d threads: %f\n", time_s, NUM_THREADS, time_p);

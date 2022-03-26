@@ -1,7 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <omp.h>
-#include "utils.h"
+#include "quicksort.h"
 
 #define NUM_THREADS 2
 
@@ -87,7 +84,7 @@ void quicksort_par(int low, int high, int arr[])
 //     }
 // }
 
-int main()
+int quicksort_main() //rename this when running
 {
     int dim = 0.5e3;
     double start, time_s, time_p;

@@ -168,9 +168,9 @@ int main(int argc, char *argv[])
         MPI_Type_vector(dim, 1, 1, c_type, &row_vec);
         MPI_Type_commit(&row_vec);
 
-        // MPI_Datatype col_vec;
-        // MPI_Type_vector(dim, 1, dim, c_type, &col_vec);
-        // MPI_Type_commit(&col_vec);
+        MPI_Datatype col_vec;
+        MPI_Type_vector(dim, block_dim, dim, c_type, &col_vec);
+        MPI_Type_commit(&col_vec);
 
         sub_C = malloc((block_dim*block_dim) * sizeof(complex));
         // print_matrix(dim, dim, C);
@@ -181,7 +181,7 @@ int main(int argc, char *argv[])
                 if (i == 0 && j == 0)
                     continue;
                 MPI_Send(A+i*block_dim*dim, block_dim, row_vec, i*b_rows+j, 0, MPI_COMM_WORLD);
-                MPI_Send(Bt+j*block_dim*dim, block_dim, row_vec, i*b_rows+j, 1, MPI_COMM_WORLD);
+                MPI_Send(B+j*block_dim, 1, col_vec, i*b_rows+j, 1, MPI_COMM_WORLD);
                 
             }
             
@@ -233,7 +233,8 @@ int main(int argc, char *argv[])
 
         MPI_Recv(sub_A, block_dim*dim, c_type, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         MPI_Recv(sub_B, block_dim*dim, c_type, 0, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        multiply_transpose(sub_A, sub_B, sub_C, block_dim, dim);
+        // multiply_transpose(sub_A, sub_B, sub_C, block_dim, dim);
+        multiply_naive(block_dim, dim, sub_A, dim, block_dim, sub_B, sub_C);
         // print_matrix(block_dim, dim, sub_B);
 
         MPI_Send(sub_C, block_dim*block_dim, c_type, 0, 9, MPI_COMM_WORLD);

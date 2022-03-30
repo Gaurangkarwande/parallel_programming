@@ -128,7 +128,7 @@ int main(int argc, char *argv[])
     // complex c = {0,0};
     // c = complex_multiply(a,b);
     // printf("%d j%d", c.r, c.i);
-    int dim = 1260;
+    int dim = 256;
     double start, time_s, time_p;
     complex* A = malloc((dim * dim) * sizeof(complex));
     complex* B = malloc((dim * dim) * sizeof(complex));
@@ -147,7 +147,7 @@ int main(int argc, char *argv[])
     time_s = MPI_Wtime() - start;
 
     complex *sub_A, *sub_B, *sub_C;
-    int rank, numprocs, block_dim, b_rows, b_cols, i, j, proc_i, proc_j;
+    int rank, numprocs, block_dim, b_rows, b_cols, i, j, k, proc_i, proc_j;
     
     MPI_Init(&argc,&argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -180,19 +180,18 @@ int main(int argc, char *argv[])
 
         multiply_submatrix(A, Bt, C, block_dim, dim);
         // print_matrix(dim, dim, C);
-        for (proc_i = 0; proc_i < b_rows; proc_i++)
+        for (k = 1; k < numprocs; k++)
         {
-            for (proc_j = 0; proc_j < b_cols; proc_j++)
+            proc_i = (int) k/b_rows;
+            proc_j = k%b_cols;
+            if (proc_i == 0 && proc_j == 0)
+                continue;
+            MPI_Recv(sub_C, block_dim*block_dim, c_type, proc_i*b_rows+proc_j, 9, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            for (i = 0; i < block_dim; i++)
             {
-                if (proc_i == 0 && proc_j == 0)
-                    continue;
-                MPI_Recv(sub_C, block_dim*block_dim, c_type, proc_i*b_rows+proc_j, 9, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                for (i = 0; i < block_dim; i++)
+                for (j = 0; j < block_dim; j++)
                 {
-                    for (j = 0; j < block_dim; j++)
-                    {
-                        C[(i + proc_i*block_dim)*dim + (j + proc_j*block_dim)] = sub_C[i*block_dim + j];
-                    }
+                    C[(i + proc_i*block_dim)*dim + (j + proc_j*block_dim)] = sub_C[i*block_dim + j];
                 }
             }
         }
@@ -229,6 +228,7 @@ int main(int argc, char *argv[])
 
         MPI_Send(sub_C, block_dim*block_dim, c_type, 0, 9, MPI_COMM_WORLD);
     }
+    MPI_Type_free(&c_type);
     MPI_Finalize();
     return 0;
 }

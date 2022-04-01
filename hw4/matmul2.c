@@ -123,12 +123,7 @@ void multiply_submatrix(complex first[], complex second[], complex result[], int
 
 int main(int argc, char *argv[])
 {
-    // complex a = {1,2};
-    // complex b = {3,4};
-    // complex c = {0,0};
-    // c = complex_multiply(a,b);
-    // printf("%d j%d", c.r, c.i);
-    int dim = 420;
+    int dim = 1680;
     double start, time_s, time_p;
     complex* A = malloc((dim * dim) * sizeof(complex));
     complex* B = malloc((dim * dim) * sizeof(complex));
@@ -143,9 +138,10 @@ int main(int argc, char *argv[])
     transpose_matrix(dim, B, Bt);
     
     start = MPI_Wtime();
-    multiply_naive(dim, dim, A, dim, dim, B, Baseline);
+    // multiply_naive(dim, dim, A, dim, dim, B, Baseline);
     time_s = MPI_Wtime() - start;
 
+    start = MPI_Wtime();
     complex *sub_A, *sub_B, *sub_C;
     int rank, numprocs, block_dim, b_rows, b_cols, i, j, k, proc_i, proc_j;
     
@@ -162,8 +158,6 @@ int main(int argc, char *argv[])
 
     if (rank == 0)  
     {
-        start = MPI_Wtime();
-
         MPI_Datatype row_vec;
         MPI_Type_vector(dim, 1, 1, c_type, &row_vec);
         MPI_Type_commit(&row_vec);
@@ -206,7 +200,7 @@ int main(int argc, char *argv[])
         }
         time_p = MPI_Wtime() - start;
         
-        if (compare_matrix(dim, Baseline, C) == -1)
+        if (dim < 512 && compare_matrix(dim, Baseline, C) == -1)
         {
             printf("Matrix multiplication is wrong\n");
             if (dim <= 16)
@@ -220,10 +214,9 @@ int main(int argc, char *argv[])
                 printf("Matrix C: \n");
                 print_matrix(dim, dim, C);
             }
-            return -1;
         }
         MPI_Type_free(&row_vec);
-        printf("Time for serial: %f ms \t Time for mpi_parallel: %f ms \n", time_s*1000, time_p*1000);
+        printf("For matrix size %d : Time for serial: %f ms \t Time for mpi_parallel: %f ms \n",dim, time_s*1000, time_p*1000);     
     }
     else
     {

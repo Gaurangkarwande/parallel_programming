@@ -123,6 +123,7 @@ int main(int argc, char *argv[])
     // multiply_naive(dim, dim, A, dim, dim, B, Baseline);
     time_s = MPI_Wtime() - start;
 
+    start = MPI_Wtime();
     complex *sub_A, *sub_B, *sub_C, *mat_C;
     int rank, numprocs, block_dim, b_rows, b_cols, i, j, k, proc_i, proc_j, row_rank, col_rank, numprocs_row, numprocs_col;
     MPI_Comm row_comm;
@@ -131,8 +132,6 @@ int main(int argc, char *argv[])
     MPI_Init(&argc,&argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
-    if (rank == 0)
-        start = MPI_Wtime();
 
     MPI_Datatype c_type;
     MPI_Type_contiguous(2, MPI_INT, &c_type);
@@ -209,7 +208,7 @@ int main(int argc, char *argv[])
                 print_matrix(dim, dim, C);
             }
         }
-        printf("Time for serial: %f ms \t Time for mpi_parallel: %f ms \n", time_s*1000, time_p*1000);
+        printf("For matrix size %d, num procs %d : Time for serial: %f ms \t Time for mpi_parallel: %f ms \n",dim, numprocs, time_s*1000, time_p*1000);
     }
     MPI_Type_free(&row_vec);
     MPI_Type_free(&c_type);

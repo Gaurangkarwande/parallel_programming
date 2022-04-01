@@ -123,106 +123,20 @@ void multiply_submatrix(complex first[], complex second[], complex result[], int
 
 int main(int argc, char *argv[])
 {
-    int dim = 1680;
-    double start, time_s, time_p;
+    int dim = 840;
+    double start, time_s;
     complex* A = malloc((dim * dim) * sizeof(complex));
     complex* B = malloc((dim * dim) * sizeof(complex));
-    complex* C = malloc((dim * dim) * sizeof(complex));
     complex* Baseline = malloc((dim * dim) * sizeof(complex));
-    complex* Bt = malloc((dim * dim) * sizeof(complex));
 
     initialize_matrix(dim, A, 0);
     initialize_matrix(dim, B, 0);
-    initialize_matrix(dim, C, 1 );
     initialize_matrix(dim, Baseline, 1);
-    transpose_matrix(dim, B, Bt);
     
     start = MPI_Wtime();
-    // multiply_naive(A, B, Baseline, dim);
+    multiply_naive(A, B, Baseline, dim);
     time_s = MPI_Wtime() - start;
+    printf("For matrix size %d : Time for serial: %f ms \n", dim, time_s*1000);
 
-    start = MPI_Wtime();
-    complex *sub_A, *sub_B, *sub_C;
-    int rank, numprocs, block_dim, b_rows, b_cols, i, j, k, proc_i, proc_j;
-    
-    MPI_Init(&argc,&argv);
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
-
-    MPI_Datatype c_type;
-    MPI_Type_contiguous(2, MPI_INT, &c_type);
-    MPI_Type_commit(&c_type);
-
-    block_dim = dim/sqrt(numprocs);
-    b_rows = b_cols = (int) sqrt(numprocs);
-
-    if (rank == 0)  
-    {
-        sub_C = malloc((block_dim*block_dim) * sizeof(complex));
-        // print_matrix(dim, dim, C);
-        for (i = 0; i < b_rows; i++)
-        {
-            for (j = 0; j < b_cols; j++)
-            {
-                if (i == 0 && j == 0)
-                    continue;
-                MPI_Send(A+i*block_dim*dim, block_dim*dim, c_type, i*b_rows+j, 0, MPI_COMM_WORLD);
-                MPI_Send(Bt+j*block_dim*dim, block_dim*dim, c_type, i*b_rows+j, 1, MPI_COMM_WORLD);
-                
-            }
-            
-        }
-
-        multiply_submatrix(A, Bt, C, block_dim, dim);
-        // print_matrix(dim, dim, C);
-        for (k = 1; k < numprocs; k++)
-        {
-            proc_i = (int) k/b_rows;
-            proc_j = k%b_cols;
-            if (proc_i == 0 && proc_j == 0)
-                continue;
-            MPI_Recv(sub_C, block_dim*block_dim, c_type, proc_i*b_rows+proc_j, 9, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            for (i = 0; i < block_dim; i++)
-            {
-                for (j = 0; j < block_dim; j++)
-                {
-                    C[(i + proc_i*block_dim)*dim + (j + proc_j*block_dim)] = sub_C[i*block_dim + j];
-                }
-            }
-        }
-        time_p = MPI_Wtime() - start;
-        
-        if (dim < 512 && compare_matrix(dim, Baseline, C) == -1)
-        {
-            printf("Matrix multiplication is wrong\n");
-            if (dim <= 16)
-            {
-                printf("Matrix A: \n");
-                print_matrix(dim, dim, A);
-                printf("Matrix B: \n");
-                print_matrix(dim, dim, B);
-                printf("Matrix Baseline: \n");
-                print_matrix(dim, dim, Baseline);
-                printf("Matrix C: \n");
-                print_matrix(dim, dim, C);
-            }
-        }
-        printf("For matrix size %d : Time for serial: %f ms \t Time for mpi_parallel: %f ms \n",dim, time_s*1000, time_p*1000);
-    }
-    else
-    {
-        sub_A = malloc((block_dim * dim) * sizeof(complex)); 
-        sub_B = malloc((block_dim * dim) * sizeof(complex));
-        sub_C = malloc((block_dim * block_dim) * sizeof(complex));
-
-        MPI_Recv(sub_A, block_dim*dim, c_type, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        MPI_Recv(sub_B, block_dim*dim, c_type, 0, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        multiply_transpose(sub_A, sub_B, sub_C, block_dim, dim);
-        // print_matrix(block_dim, block_dim, sub_C);
-
-        MPI_Send(sub_C, block_dim*block_dim, c_type, 0, 9, MPI_COMM_WORLD);
-    }
-    MPI_Type_free(&c_type);
-    MPI_Finalize();
     return 0;
 }

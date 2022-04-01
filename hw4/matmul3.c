@@ -123,11 +123,6 @@ void multiply_submatrix(complex first[], complex second[], complex result[], int
 
 int main(int argc, char *argv[])
 {
-    // complex a = {1,2};
-    // complex b = {3,4};
-    // complex c = {0,0};
-    // c = complex_multiply(a,b);
-    // printf("%d j%d", c.r, c.i);
     int dim = 8;
     double start, time_s, time_p;
     complex* A = malloc((dim * dim) * sizeof(complex));
@@ -184,9 +179,7 @@ int main(int argc, char *argv[])
                 if (i == 0 && j == 0)
                     continue;
                 MPI_Isend(A+i*block_dim*dim, block_dim, row_vec, i*b_rows+j, 0, MPI_COMM_WORLD, &request_A[ i*b_rows+j - 1]);
-                // MPI_Send(A+i*block_dim*dim, block_dim, row_vec, i*b_rows+j, 0, MPI_COMM_WORLD);
                 MPI_Isend(B+j*block_dim, 1, col_vec, i*b_rows+j, 1, MPI_COMM_WORLD, &request_B[ i*b_rows+j - 1]);
-                // MPI_Send(B+j*block_dim, 1, col_vec, i*b_rows+j, 1, MPI_COMM_WORLD);
                 
             }
             
@@ -239,9 +232,7 @@ int main(int argc, char *argv[])
 
         MPI_Recv(sub_A, block_dim*dim, c_type, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         MPI_Recv(sub_B, block_dim*dim, c_type, 0, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        // multiply_transpose(sub_A, sub_B, sub_C, block_dim, dim);
         multiply_naive(block_dim, dim, sub_A, dim, block_dim, sub_B, sub_C);
-        // print_matrix(block_dim, dim, sub_B);
 
         MPI_Send(sub_C, block_dim*block_dim, c_type, 0, 9, MPI_COMM_WORLD);
     }

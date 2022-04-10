@@ -98,9 +98,6 @@ int main(int argc, char *argv[])
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
 
-    if (rank == 0)
-        start = MPI_Wtime();
-
     block_dim = dim/sqrt(numprocs);
     b_rows = b_cols = (int) sqrt(numprocs);
 
@@ -141,6 +138,9 @@ int main(int argc, char *argv[])
 		}
 	}
 
+    if (rank == 0)
+        start = MPI_Wtime();
+
 	MPI_Scatterv(&(A[0][0]), sendCounts, displacements, subarrtype, &(sub_A[0][0]), block_dim*block_dim, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Scatterv(&(B[0][0]), sendCounts, displacements, subarrtype, &(sub_B[0][0]), block_dim*block_dim, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
@@ -162,7 +162,6 @@ int main(int argc, char *argv[])
         MPI_Sendrecv_replace(&(sub_A[0][0]), block_dim*block_dim, MPI_DOUBLE, left, 1, right, 1, cart_comm, MPI_STATUS_IGNORE);
         MPI_Sendrecv_replace(&(sub_B[0][0]), block_dim*block_dim, MPI_DOUBLE, up, 1, down, 1, cart_comm, MPI_STATUS_IGNORE);
     }
-    MPI_Barrier(cart_comm);
     MPI_Barrier(MPI_COMM_WORLD);
     
     MPI_Gatherv(&(sub_C[0][0]), block_dim*block_dim, MPI_DOUBLE, &(C[0][0]), sendCounts, displacements, subarrtype, 0, MPI_COMM_WORLD);

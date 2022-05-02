@@ -1,29 +1,81 @@
-.PHONY: all clean
+###########################################################
 
-CC = nvcc
-INCLUDES = -I .
-TARGET = ssp
-MAP_FILE = ssp.map
+## USER SPECIFIC DIRECTORIES ##
 
-CC_OPTIONS = -g
-LD_FLAGS = -Xlinker -Map=$(MAP_FILE)
-LD_LIBS = -lblas -lm
+# CUDA directory:
+CUDA_ROOT_DIR=/usr/local/cuda
 
-SRC = $(wildcard *.c)
-OBJ_FILES = $(SRC:.c=.o) #utils.o quicksort.o
+##########################################################
 
-.SILENT: clean all %.o
+## CC COMPILER OPTIONS ##
 
-all: ${OBJ_FILES}
-	@echo "Building ${TARGET} ..."
-	${CC} ${CC_OPTIONS} ${LD_FLAGS} ${OBJ_FILES} -o ${TARGET} ${LD_LIBS}
+# CC compiler options:
+CC=gcc
+CC_FLAGS= -g
+CC_LIBS=
 
-%.o: %.c
-	@echo "Compiling $*.o ..."
-	${CC} ${CC_OPTIONS} $(LD_FLAGS) -c $*.c ${INCLUDES}
+##########################################################
 
+## NVCC COMPILER OPTIONS ##
+
+# NVCC compiler options:
+NVCC=nvcc
+NVCC_FLAGS=
+NVCC_LIBS=
+
+# CUDA library directory:
+CUDA_LIB_DIR= -L$(CUDA_ROOT_DIR)/lib64
+# CUDA include directory:
+CUDA_INC_DIR= -I$(CUDA_ROOT_DIR)/include
+# CUDA linking libraries:
+CUDA_LINK_LIBS= -lcudart
+
+##########################################################
+
+## Project file structure ##
+
+# Source file directory:
+SRC_DIR = src
+
+# Object file directory:
+OBJ_DIR = bin
+
+# Include header file diretory:
+INC_DIR = include
+
+##########################################################
+
+## Make variables ##
+
+# Target executable name:
+EXE = ssp
+
+SOURCES_C := $(wildcard $(SRC_DIR)/*.c)
+SOURCES_CUDA := $(wildcard $(SRC_DIR)/*.cu)
+
+# Object files:
+OBJS := $(OBJ_DIR)/main.o $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(SOURCES_C)) $(patsubst $(SRC_DIR)/%.cu, $(OBJ_DIR)/%.o, $(SOURCES_CUDA))
+
+##########################################################
+
+## Compile ##
+
+# Link c++ and CUDA compiled object files to target executable:
+$(EXE) : $(OBJS)
+	$(CC) $(CC_FLAGS) $(OBJS) -o $@ $(CUDA_INC_DIR) $(CUDA_LIB_DIR) $(CUDA_LINK_LIBS)
+
+# Compile main .c file to object files:
+$(OBJ_DIR)/%.o : %.c
+	$(CC) $(CC_FLAGS) -c $< -o $@
+
+# Compile C++ source files to object files:
+$(OBJ_DIR)/%.o : $(SRC_DIR)/%.c include/%.h
+	$(CC) $(CC_FLAGS) -c $< -o $@
+
+# Compile CUDA source files to object files:
+$(OBJ_DIR)/%.o : $(SRC_DIR)/%.cu $(INC_DIR)/%.cuh
+	$(NVCC) $(NVCC_FLAGS) -c $< -o $@ $(NVCC_LIBS)
+
+# Clean objects in object directory.
 clean:
-	@echo "Cleaning $(OBJ_FILES) $(TARGET) $(MAP_FILE)..."
-	-rm -rf	 *.o
-	-rm -rf	 ssp.map
-	-rm -rf	 ssp
+	$(RM) bin/* *.o $(EXE)

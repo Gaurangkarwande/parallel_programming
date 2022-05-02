@@ -4,8 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include "utils.h"
-#include "ssp_sequential.h"
+#include "include/utils.h"
+#include "include/ssp_sequential.h"
 
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))

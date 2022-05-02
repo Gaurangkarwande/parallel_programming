@@ -1,4 +1,4 @@
-#include "ssp_sequential.h"
+#include "../include/ssp_sequential.h"
 
 
 void updateIndexOfEdges(int num_nodes, int num_edges, int V[], int E[])

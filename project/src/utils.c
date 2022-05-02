@@ -1,4 +1,4 @@
-#include "utils.h"
+#include "../include/ssp_sequential.h"
 
 int read_int_array(const char* filename, int A[])
 {

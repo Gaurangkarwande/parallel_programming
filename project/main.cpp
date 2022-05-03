@@ -9,10 +9,10 @@ int main(int argc, char *argv[])
     int num_nodes = NUM_NODES;
     int num_edges =  NUM_EDGES;
     int source = SOURCE;
-    int *V = malloc(num_nodes * sizeof(int));
-    int *I = malloc((num_nodes+1) * sizeof(int));
-    int *E = malloc(num_edges * sizeof(int));
-    float *W = malloc(num_edges * sizeof(float));
+    int *V = (int*) malloc(num_nodes * sizeof(int));
+    int *I = (int*) malloc((num_nodes+1) * sizeof(int));
+    int *E = (int*) malloc(num_edges * sizeof(int));
+    float *W = (float*) malloc(num_edges * sizeof(float));
     
     char V_file[] = "./data/sample_V.txt";
     char I_file[] = "./data/sample_I.txt";
@@ -29,7 +29,8 @@ int main(int argc, char *argv[])
     // print_int_array(num_edges, E);
     // print_float_array(NUM_EDGES, W);
 
-    bellman_sequential(source, num_nodes, num_edges, V, I, E, W);
+    bellman_sequential(source, num_nodes, num_edges, V, I, E, W, "./output/sample_directed.txt");
+    printCudaDevice();
     
     return 0;
 }

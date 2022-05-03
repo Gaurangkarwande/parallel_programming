@@ -47,8 +47,16 @@ void print_float_array(int n, float A[])
 void init_distances(int n, float D[])
 {
     for (int i = 0; i < n; i++)
-    {
-        D[i] = __FLT_MAX__;
-    }
-    
+        D[i] = __FLT_MAX__;   
+}
+
+void save_to_file(int n, int V[], float D[], const char* filename)
+{
+    printf("Saving result to file %s\n", filename);
+    FILE *fp;
+    fp = fopen(filename, "w");
+    fprintf(fp, "Node \t:\tDistance\n");
+    for (int i = 0; i < n; i++)
+        fprintf(fp, "%d \t:\t%.1e\n", V[i], D[i]);
+    fclose(fp);
 }

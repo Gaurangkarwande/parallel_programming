@@ -25,11 +25,11 @@ void updateIndexOfEdges(int num_nodes, int num_edges, int V[], int E[])
     }
 }
 
-void bellman_sequential(int source, int num_nodes, int num_edges, int V[], int I[], int E[], float W[])
+void bellman_sequential(int source, int num_nodes, int num_edges, int V[], int I[], int E[], float W[], const char* filename)
 {
     printf("\n Running BellmanFord Sequential for graph with %d nodes and %d edges and source node %d \n", num_nodes, num_edges, source);
-    float *D = malloc(num_nodes * sizeof(float));
-    int *pred = malloc(num_nodes * sizeof(int));
+    float *D = (float *) malloc(num_nodes * sizeof(float));
+    int *pred = (int *) malloc(num_nodes * sizeof(int));
     
 
     init_distances(num_nodes, D);
@@ -57,6 +57,6 @@ void bellman_sequential(int source, int num_nodes, int num_edges, int V[], int I
         }
     }
 
-    print_float_array(num_nodes, D);
+    save_to_file(num_nodes, V, D, filename);
     
 }

@@ -3,6 +3,7 @@
 
 #include <cstdlib>
 #include <math.h>
+#include <time.h>
 #include "include/utils.h"
 #include "include/ssp_sequential.h"
 #include "include/ssp_cuda.cuh"

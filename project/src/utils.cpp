@@ -40,7 +40,7 @@ void print_int_array(int n, int A[])
 void print_float_array(int n, float A[])
 {
     for (int i = 0; i < n; i++)
-        printf("%.1f\t", A[i]);
+        printf("%.1e\t", A[i]);
     printf("\n");
 }
 
